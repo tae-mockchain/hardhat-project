@@ -61,15 +61,19 @@ contract StructExample {
         uint256 loyaltyPoints;
     }
 
-    // State variables
-    mapping(uint256 => User) public users;
-    mapping(uint256 => Product) public products;
-    mapping(uint256 => Order) public orders;
-    mapping(uint256 => UserProfile) public userProfiles;
-    
-    uint256 public userCount;
-    uint256 public productCount;
-    uint256 public orderCount;
+    // Main data struct containing all mappings
+    struct Data {
+        mapping(uint256 => User) users;
+        mapping(uint256 => Product) products;
+        mapping(uint256 => Order) orders;
+        mapping(uint256 => UserProfile) userProfiles;
+        uint256 userCount;
+        uint256 productCount;
+        uint256 orderCount;
+    }
+
+    // Single state variable containing all data
+    Data public stored;
 
     // Events
     event UserCreated(uint256 indexed userId, string name, address wallet);
@@ -83,9 +87,9 @@ contract StructExample {
         string memory _email,
         address _wallet
     ) public returns (uint256) {
-        userCount++;
-        users[userCount] = User({
-            id: userCount,
+        stored.userCount++;
+        stored.users[stored.userCount] = User({
+            id: stored.userCount,
             name: _name,
             email: _email,
             registrationDate: block.timestamp,
@@ -93,8 +97,8 @@ contract StructExample {
             wallet: _wallet
         });
 
-        emit UserCreated(userCount, _name, _wallet);
-        return userCount;
+        emit UserCreated(stored.userCount, _name, _wallet);
+        return stored.userCount;
     }
 
     function createUserProfile(
@@ -105,7 +109,7 @@ contract StructExample {
         string memory _zipCode,
         string memory _country
     ) public {
-        require(users[_userId].id != 0, "User does not exist");
+        require(stored.users[_userId].id != 0, "User does not exist");
         
         Address memory shippingAddress = Address({
             street: _street,
@@ -115,8 +119,8 @@ contract StructExample {
             country: _country
         });
 
-        userProfiles[_userId] = UserProfile({
-            user: users[_userId],
+        stored.userProfiles[_userId] = UserProfile({
+            user: stored.users[_userId],
             shippingAddress: shippingAddress,
             totalOrders: 0,
             loyaltyPoints: 0
@@ -131,9 +135,9 @@ contract StructExample {
         uint256 _stock,
         address _owner
     ) public returns (uint256) {
-        productCount++;
-        products[productCount] = Product({
-            id: productCount,
+        stored.productCount++;
+        stored.products[stored.productCount] = Product({
+            id: stored.productCount,
             name: _name,
             description: _description,
             price: _price,
@@ -142,14 +146,14 @@ contract StructExample {
             owner: _owner
         });
 
-        emit ProductAdded(productCount, _name, _price);
-        return productCount;
+        emit ProductAdded(stored.productCount, _name, _price);
+        return stored.productCount;
     }
 
     function updateProductStock(uint256 _productId, uint256 _newStock) public {
-        require(products[_productId].id != 0, "Product does not exist");
-        products[_productId].stock = _newStock;
-        products[_productId].isAvailable = _newStock > 0;
+        require(stored.products[_productId].id != 0, "Product does not exist");
+        stored.products[_productId].stock = _newStock;
+        stored.products[_productId].isAvailable = _newStock > 0;
     }
 
     // Order management functions
@@ -158,16 +162,16 @@ contract StructExample {
         uint256 _productId,
         uint256 _quantity
     ) public returns (uint256) {
-        require(users[_userId].id != 0, "User does not exist");
-        require(products[_productId].id != 0, "Product does not exist");
-        require(products[_productId].stock >= _quantity, "Insufficient stock");
-        require(products[_productId].isAvailable, "Product not available");
+        require(stored.users[_userId].id != 0, "User does not exist");
+        require(stored.products[_productId].id != 0, "Product does not exist");
+        require(stored.products[_productId].stock >= _quantity, "Insufficient stock");
+        require(stored.products[_productId].isAvailable, "Product not available");
 
-        orderCount++;
-        uint256 totalPrice = products[_productId].price * _quantity;
+        stored.orderCount++;
+        uint256 totalPrice = stored.products[_productId].price * _quantity;
 
-        orders[orderCount] = Order({
-            id: orderCount,
+        stored.orders[stored.orderCount] = Order({
+            id: stored.orderCount,
             userId: _userId,
             productId: _productId,
             quantity: _quantity,
@@ -178,27 +182,27 @@ contract StructExample {
         });
 
         // Update stock
-        products[_productId].stock -= _quantity;
-        if (products[_productId].stock == 0) {
-            products[_productId].isAvailable = false;
+        stored.products[_productId].stock -= _quantity;
+        if (stored.products[_productId].stock == 0) {
+            stored.products[_productId].isAvailable = false;
         }
 
         // Update user profile
-        if (userProfiles[_userId].user.id != 0) {
-            userProfiles[_userId].totalOrders++;
-            userProfiles[_userId].loyaltyPoints += _quantity * 10; // 10 points per item
+        if (stored.userProfiles[_userId].user.id != 0) {
+            stored.userProfiles[_userId].totalOrders++;
+            stored.userProfiles[_userId].loyaltyPoints += _quantity * 10; // 10 points per item
         }
 
-        emit OrderPlaced(orderCount, _userId, _productId);
-        return orderCount;
+        emit OrderPlaced(stored.orderCount, _userId, _productId);
+        return stored.orderCount;
     }
 
     function updateOrderStatus(uint256 _orderId, OrderStatus _newStatus) public {
-        require(orders[_orderId].id != 0, "Order does not exist");
-        orders[_orderId].status = _newStatus;
+        require(stored.orders[_orderId].id != 0, "Order does not exist");
+        stored.orders[_orderId].status = _newStatus;
         
         if (_newStatus == OrderStatus.Delivered) {
-            orders[_orderId].deliveryDate = block.timestamp;
+            stored.orders[_orderId].deliveryDate = block.timestamp;
         }
 
         emit OrderStatusUpdated(_orderId, _newStatus);
@@ -206,39 +210,39 @@ contract StructExample {
 
     // View functions
     function getUser(uint256 _userId) public view returns (User memory) {
-        return users[_userId];
+        return stored.users[_userId];
     }
 
     function getProduct(uint256 _productId) public view returns (Product memory) {
-        return products[_productId];
+        return stored.products[_productId];
     }
 
     function getOrder(uint256 _orderId) public view returns (Order memory) {
-        return orders[_orderId];
+        return stored.orders[_orderId];
     }
 
     function getUserProfile(uint256 _userId) public view returns (UserProfile memory) {
-        return userProfiles[_userId];
+        return stored.userProfiles[_userId];
     }
 
     function getOrderStatus(uint256 _orderId) public view returns (OrderStatus) {
-        return orders[_orderId].status;
+        return stored.orders[_orderId].status;
     }
 
     // Utility functions
     function isUserActive(uint256 _userId) public view returns (bool) {
-        return users[_userId].isActive;
+        return stored.users[_userId].isActive;
     }
 
     function getProductAvailability(uint256 _productId) public view returns (bool) {
-        return products[_productId].isAvailable && products[_productId].stock > 0;
+        return stored.products[_productId].isAvailable && stored.products[_productId].stock > 0;
     }
 
     function getTotalOrdersByUser(uint256 _userId) public view returns (uint256) {
-        return userProfiles[_userId].totalOrders;
+        return stored.userProfiles[_userId].totalOrders;
     }
 
     function getLoyaltyPoints(uint256 _userId) public view returns (uint256) {
-        return userProfiles[_userId].loyaltyPoints;
+        return stored.userProfiles[_userId].loyaltyPoints;
     }
 }
