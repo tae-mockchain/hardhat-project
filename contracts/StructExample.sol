@@ -61,11 +61,12 @@ contract StructExample {
         uint256 loyaltyPoints;
     }
 
-    // Main data struct with 3 members (like in the image)
+    // Main data struct with 4 members (including owner)
     struct StoredStorage {
         uint256 amount;
         address account;
         string note;
+        address owner;
     }
 
     // Single state variable containing all data
@@ -80,6 +81,11 @@ contract StructExample {
     uint256 public userCount;
     uint256 public productCount;
     uint256 public orderCount;
+
+    // Constructor to set the owner
+    constructor() {
+        stored.owner = msg.sender;
+    }
 
     // Events
     event UserCreated(uint256 indexed userId, string name, address wallet);
@@ -227,4 +233,15 @@ contract StructExample {
     }
 
     // getTotalOrdersByUser and getLoyaltyPoints functions removed since userProfiles is not in the struct anymore
+
+    // Owner management functions
+    function getOwner() public view returns (address) {
+        return stored.owner;
+    }
+
+    function updateOwner(address _newOwner) public {
+        require(msg.sender == stored.owner, "Only the current owner can update the owner");
+        require(_newOwner != address(0), "New owner cannot be the zero address");
+        stored.owner = _newOwner;
+    }
 }
