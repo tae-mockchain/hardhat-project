@@ -24,7 +24,7 @@ contract Counter {
 
   function updateOwner(address _newOwner) public {
     require(msg.sender == owner, "Only the current owner can update the owner");
-    require(_newOwner != address(0), "New owner cannot be the zero address");
+    require(_newOwner != address(0), "New owner cannot be zero address");
     owner = _newOwner;
   }
 }
